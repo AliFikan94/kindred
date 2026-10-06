@@ -238,3 +238,11 @@ describe('a drop pays everyone', () => {
     expect((await sim.get(vault)).state).toBe(State.Closed);
   });
 });
+
+describe('the demo account', () => {
+  it('has a real, valid address (a malformed one would break every address check downstream)', async () => {
+    const { isAddress } = await import('viem');
+    const { sim } = make();
+    expect(isAddress(await sim.connect(), { strict: false })).toBe(true);
+  });
+});

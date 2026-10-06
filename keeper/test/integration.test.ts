@@ -412,7 +412,9 @@ describe('statelessness and resilience', () => {
     const server = startStatusServer(port, k.keeper, k.metrics, 1000, () => now);
     await sleep(100);
     try {
-      const s = await (await fetch(`http://127.0.0.1:${port}/status`)).json();
+      const res = await fetch(`http://127.0.0.1:${port}/status`);
+      expect(res.headers.get('access-control-allow-origin')).toBe('*'); // readable from a web page
+      const s = await res.json();
       expect(s.healthy).toBe(true);
       expect(s.reliability.deliveries).toBe(1);
       expect(s.address.toLowerCase()).toBe(keeperA.address.toLowerCase());

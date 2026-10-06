@@ -123,7 +123,7 @@ function View({ s, meta, now, fresh, refresh }: { s: ScheduleView; meta: Meta | 
   const letter = (
     <>
       <div className="to">For {label}</div>
-      <div className="amt">{fmtMon(single ? shownAmount(t0) : total)} <small>{cfg.currency}</small></div>
+      <div className="amt">{fmtMon(single ? shownAmount(t0) : total, 2)} <small>{cfg.currency}</small></div>
       {single && meta?.note && <div className="words">“{meta.note}”</div>}
       {!single && (
         <div className="pays">
@@ -322,7 +322,7 @@ function RecipientActions({ s, mine, keyHex, keyAddr, act, doAct, now }: {
             <div className="row"><button className="cta line" onClick={connect}>Connect wallet</button></div>
           ) : null}
           <label className="lbl" htmlFor="dest">Send to</label>
-          <input id="dest" className="field" style={{ fontSize: 16 }} spellCheck={false} placeholder={account ?? '0x…'} value={dest} onChange={(e) => setDest(e.target.value)} />
+          <input id="dest" className="field" style={{ fontSize: 16 }} spellCheck={false} placeholder={account ? `${shortAddr(account)} (this wallet)` : '0x…'} value={dest} onChange={(e) => setDest(e.target.value)} />
           <div className="row">
             <button className="cta dawn" disabled={!!act.busy || !target || !keyHex} onClick={() => keyHex && target && doAct('move', () => adapter.moveAll(keyHex, target), 'Moved to your wallet')}>
               {act.busy === 'move' ? 'Moving…' : 'Move it'}

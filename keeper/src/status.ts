@@ -20,7 +20,8 @@ export function startStatusServer(port: number, keeper: Keeper, metrics: Metrics
       return;
     }
     if (req.url === '/status') {
-      res.writeHead(200, { 'content-type': 'application/json' });
+      // Read-only public numbers (no secrets, no keys): any web page may show them, e.g. the app's reliability badge.
+      res.writeHead(200, { 'content-type': 'application/json', 'access-control-allow-origin': '*' });
       res.end(JSON.stringify({ healthy, ...s, reliability: metrics.summary(), recent: metrics.recent().slice(-20) }, json, 2));
       return;
     }

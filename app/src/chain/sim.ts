@@ -16,7 +16,7 @@ const PREPARE_LEAD = 2 * DAY;
 const CANCEL_DELAY = 7 * DAY;
 const MON = 10n ** 18n;
 const GAS_COST = MON / 2000n; // 0.0005 MON per transaction
-const DEMO_USER = '0xD3m0000000000000000000000000000000000001' as Address;
+const DEMO_USER = '0xD3a0000000000000000000000000000000000001' as Address;
 const STORE_KEY = 'kindred-sim-v1';
 
 type Hex = `0x${string}`;

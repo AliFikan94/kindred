@@ -1,6 +1,6 @@
 # Kindred — Product & Contract Spec (v0.2, hackathon scope)
 
-Status: §14 (vault/factory) and §15 (staking) record what the contracts in `contracts/` actually do. The keeper (§10) and Aurora funding (§8) are not built yet. Items marked **VERIFY** depend on external
+Status: §14 (vault/factory), §15 (staking), §16 (keeper) and §17 (app) record what is actually built. Aurora funding (§8) is not built yet. Items marked **VERIFY** depend on external
 facts we have not confirmed and must be checked before we rely on them.
 
 ## 1. The promise
@@ -332,3 +332,32 @@ types apart from the event alone. The event now carries `staked`.
 | Gas pricing (limit vs used) and real precompile gas | cost per action; tune `GAS_*` |
 | Log-range limits of the real RPC | tune `LOG_CHUNK` |
 | Block timestamp granularity / finality (`CONFIRMATIONS`) | lateness figures, reorg handling |
+
+## 17. As built — app (step 5)
+
+Source: `app/` (see its README). **143** unit/integration tests and **23** browser end-to-end tests.
+
+**Decisions made while building**
+- **No backend.** Labels (names, notes, "from") travel in the share link's `#fragment` and stay in the creator's `localStorage`; the chain
+  holds only addresses, amounts and timestamps. Links are treated as untrusted input.
+- **Two backends, one interface.** `LiveAdapter` (real contracts via the user's wallet) and `SimAdapter` (in-browser demo with a time machine
+  and a keeper switch). A **conformance suite** runs identical scenarios against both on a real node.
+- **A schedule is trusted only if our factory created it** (event-log check), so a link cannot make the app present an arbitrary contract
+  as a Kindred schedule.
+- **Gift links for recipients with no wallet** (the family story's hardest case): the app generates a key, uses its address as the recipient,
+  puts the key in the link fragment, and drips ~0.02 MON of gas so the holder can `claim()` with no keeper at all, then move the funds to a
+  real wallet. This is the contracts' existing `claim` / `setRecipient`, with no contract change.
+- **Growing is only offered when something would really be staked** (>= 3 days away) and always makes the schedule permanent; the UI says so
+  before the user commits.
+- **Native MON only in v1 screens.** ERC-20/NFT are supported by the contracts, not yet by the UI.
+
+**Verified (local node, real contracts, real keeper process, Chromium):** full create -> seal -> recipient -> day-arrives flow in the demo; monthly
+pay and community drop; cancel with its 7-day wait; calendar export; error and empty states; keyboard use and accessible names; no horizontal
+scroll at 360/390/820 px; dark mode. Live: wallet connect, creation with exact on-chain value, keeper delivery observed by the page, a gift link on a
+device with no wallet delivered and moved to another wallet, growing schedule created staked and permanent, wallet refusal message, foreign-factory
+schedule rejected.
+
+**Found by looking at it (and fixed):** doubled slash in share links; clipped and wrapping amount in the opened envelope; a demo address that was
+not valid hex; an over-precise amount; the footer floating on short pages. **Found by tests:** an unrecognised "out of gas" error for a link without gas.
+
+**Not verified:** a real wallet extension; any Monad network; Safari/Firefox; a full accessibility audit.
