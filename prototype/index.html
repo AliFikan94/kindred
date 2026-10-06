@@ -1,0 +1,658 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kindred</title>
+<meta name="description" content="Lock something once. It arrives on the day.">
+<style>
+:root {
+  --paper: #F6F2EB;
+  --paper-2: #EDE6DA;
+  --card: #FFFFFF;
+  --ink: #181410;
+  --muted: #6D655A;
+  --line: #DCD3C4;
+  --dawn-a: #F4A259;
+  --dawn-b: #E5546F;
+  --dawn: linear-gradient(90deg, var(--dawn-a), var(--dawn-b));
+  --focus: #E5546F;
+  --display: ui-serif, "New York", "Iowan Old Style", Georgia, serif;
+  --text: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #100D0B; --paper-2: #1A1612; --card: #211C17;
+    --ink: #F5EFE6; --muted: #A39A8C; --line: #342E27;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #100D0B; --paper-2: #1A1612; --card: #211C17;
+  --ink: #F5EFE6; --muted: #A39A8C; --line: #342E27;
+}
+
+* { box-sizing: border-box; margin: 0; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 17px/1.5 var(--text);
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; flex-direction: column;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; background: none; border: 0; }
+:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; border-radius: 8px; }
+
+/* ---------- chrome ---------- */
+.top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: max(18px, env(safe-area-inset-top)) 20px 0; width: 100%; max-width: 760px; margin: 0 auto;
+}
+.logo { font-family: var(--display); font-size: 22px; letter-spacing: -0.01em; display: flex; align-items: center; gap: 8px; }
+.logo i { width: 14px; height: 14px; border-radius: 50%; background: var(--dawn); display: inline-block; }
+.proto { font-size: 12px; color: var(--muted); border: 1px solid var(--line); padding: 3px 10px; border-radius: 99px; }
+
+.thread { display: flex; gap: 6px; justify-content: center; padding: 18px 0 0; }
+.thread span { width: 28px; height: 3px; border-radius: 3px; background: var(--line); transition: background .4s; }
+.thread span.on { background: var(--dawn); }
+
+main { flex: 1; width: 100%; max-width: 760px; margin: 0 auto; padding: 28px 20px 40px; }
+section { animation: rise .55s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(36px, 8vw, 58px); line-height: 1.04; letter-spacing: -0.02em; outline: none; }
+.lede { color: var(--muted); margin-top: 12px; font-size: 18px; max-width: 34ch; }
+.lbl { display: block; font-size: 13px; color: var(--muted); margin: 26px 0 8px; letter-spacing: .01em; }
+
+/* ---------- inputs ---------- */
+.field {
+  width: 100%; background: transparent; border: 0; border-bottom: 1.5px solid var(--line);
+  padding: 8px 0 10px; font-size: 26px; font-family: var(--display); outline: none; border-radius: 0;
+  transition: border-color .2s;
+}
+.field:focus { border-color: var(--ink); }
+.field::placeholder { color: var(--line); }
+input[type="date"].field { font-size: 22px; font-family: var(--text); color-scheme: light dark; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  padding: 10px 18px; border-radius: 99px; border: 1.5px solid var(--line);
+  font-size: 16px; transition: all .2s; min-height: 44px;
+}
+.chip:hover { border-color: var(--ink); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.chip:disabled { opacity: .4; cursor: not-allowed; }
+
+.cta {
+  display: block; width: 100%; margin-top: 36px; min-height: 58px; border-radius: 99px;
+  background: var(--ink); color: var(--paper); font-size: 18px; font-weight: 500;
+  transition: transform .15s, opacity .2s;
+}
+.cta:hover:not(:disabled) { transform: translateY(-1px); }
+.cta:active:not(:disabled) { transform: scale(.985); }
+.cta:disabled { opacity: .25; cursor: not-allowed; }
+.cta.dawn { background: var(--dawn); color: #1B120C; }
+.ghost { display: inline-block; color: var(--muted); font-size: 15px; padding: 10px 2px; text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line); }
+.ghost:hover { color: var(--ink); }
+.row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+.msg { color: var(--dawn-b); font-size: 14px; min-height: 20px; margin-top: 8px; }
+.small { font-size: 14px; color: var(--muted); }
+.also { margin-top: 28px; font-size: 15px; color: var(--muted); }
+.also button { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--line); padding: 6px 2px; }
+
+/* ---------- amount ---------- */
+.amount-wrap { display: flex; align-items: baseline; gap: 14px; margin-top: 22px; flex-wrap: wrap; }
+#amount {
+  font-family: var(--display); font-size: clamp(64px, 17vw, 120px); line-height: 1; letter-spacing: -0.03em;
+  border: 0; background: transparent; outline: none; padding: 0; min-width: 2ch; max-width: 100%;
+}
+#amount::placeholder { color: var(--line); }
+.unit { font-size: 22px; color: var(--muted); }
+
+.switch {
+  display: flex; align-items: center; justify-content: space-between; gap: 18px; width: 100%;
+  text-align: left; padding: 18px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 30px;
+}
+.switch b { font-weight: 500; display: block; }
+.switch .small { display: block; margin-top: 2px; max-width: 40ch; }
+.tog { flex: none; width: 54px; height: 32px; border-radius: 99px; background: var(--line); position: relative; transition: background .25s; }
+.tog::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .25s cubic-bezier(.3,1.4,.5,1); }
+.switch[aria-checked="true"] .tog { background: var(--dawn); }
+.switch[aria-checked="true"] .tog::after { transform: translateX(22px); }
+.switch[aria-disabled="true"] { opacity: .5; cursor: not-allowed; }
+
+/* ---------- the thread (timeline) ---------- */
+.chart { margin-top: 30px; position: relative; user-select: none; }
+.readout { min-height: 92px; }
+.readout .when { font-size: 14px; color: var(--muted); }
+.readout .big { font-family: var(--display); font-size: clamp(34px, 8vw, 48px); letter-spacing: -0.02em; line-height: 1.1; }
+.readout .big small { font-size: 18px; color: var(--muted); font-family: var(--text); letter-spacing: 0; }
+.readout .sub { font-size: 14px; color: var(--muted); margin-top: 2px; }
+.readout .sub em { font-style: normal; background: var(--dawn); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+svg.tl { width: 100%; height: auto; display: block; overflow: visible; touch-action: none; }
+.axis { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-top: 8px; }
+.scrub { position: absolute; left: 0; right: 0; bottom: 28px; top: 92px; width: 100%; opacity: 0; cursor: ew-resize; margin: 0; touch-action: pan-y; }
+.hint { position: absolute; right: 0; top: 4px; font-size: 13px; color: var(--muted); animation: pulse 2.4s ease-in-out infinite; pointer-events: none; }
+@keyframes pulse { 50% { opacity: .35; } }
+.fine { font-size: 13px; color: var(--muted); margin-top: 14px; max-width: 52ch; }
+
+/* ---------- fund ---------- */
+.summary { margin-top: 28px; border-top: 1px solid var(--line); }
+.summary div { display: flex; justify-content: space-between; gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.summary dt { color: var(--muted); } .summary dd { text-align: right; }
+.note { width: 100%; background: var(--card); border: 1.5px solid var(--line); border-radius: 16px; padding: 14px 16px; resize: none; min-height: 88px; outline: none; font-family: var(--display); font-size: 19px; line-height: 1.4; }
+.note:focus { border-color: var(--ink); }
+.steps { list-style: none; padding: 0; margin-top: 30px; }
+.steps li { display: flex; gap: 14px; align-items: center; padding: 12px 0; color: var(--muted); transition: color .3s; }
+.steps li i { width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--line); flex: none; display: grid; place-items: center; font-style: normal; font-size: 12px; transition: all .3s; }
+.steps li.active { color: var(--ink); } .steps li.active i { border-color: var(--dawn-a); animation: spin 1s linear infinite; border-top-color: transparent; }
+.steps li.done { color: var(--ink); } .steps li.done i { background: var(--ink); border-color: var(--ink); color: var(--paper); animation: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- envelope ---------- */
+.stage { perspective: 1100px; margin: 24px auto 0; max-width: 460px; padding-top: 24px; transition: padding .8s; }
+.stage.open { padding-top: 190px; }
+.env { position: relative; height: 250px; transition: transform .8s; }
+.env > * { position: absolute; left: 0; right: 0; }
+.env .back { top: 0; bottom: 0; border-radius: 20px; background: var(--paper-2); box-shadow: 0 30px 60px -30px rgba(40,20,0,.35), inset 0 0 0 1px var(--line); }
+.env .letter {
+  top: 14px; left: 22px; right: 22px; height: 214px; border-radius: 12px; background: var(--card);
+  box-shadow: 0 0 0 1px var(--line); padding: 24px 24px 0; text-align: center;
+  transition: transform .9s cubic-bezier(.3,.9,.3,1) .35s; z-index: 2; overflow: hidden;
+}
+.stage.open .letter { transform: translateY(-165px); z-index: 4; height: 300px; }
+.env .front {
+  top: 0; bottom: 0; z-index: 3; border-radius: 20px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--paper-2) 82%, var(--ink)) 0%, var(--paper-2) 100%);
+  clip-path: polygon(0 24%, 50% 64%, 100% 24%, 100% 100%, 0 100%);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.env .flap {
+  top: 0; height: 64%; z-index: 5; transform-origin: top center; transition: transform .7s cubic-bezier(.5,0,.3,1), opacity .2s .5s;
+  background: color-mix(in srgb, var(--paper-2) 70%, var(--ink)); border-radius: 20px 20px 0 0;
+  clip-path: polygon(0 0, 100% 0, 100% 37.5%, 50% 100%, 0 37.5%); backface-visibility: hidden;
+}
+.stage.open .flap { transform: rotateX(180deg); opacity: 0; }
+.seal {
+  position: absolute; z-index: 6; left: 50%; top: 64%; width: 58px; height: 58px; margin: -29px 0 0 -29px; border-radius: 50%;
+  background: var(--dawn); display: grid; place-items: center; color: #1B120C; font-family: var(--display); font-size: 26px;
+  box-shadow: 0 6px 18px -4px rgba(229,84,111,.6), inset 0 -3px 6px rgba(0,0,0,.15); transition: opacity .3s, transform .5s;
+}
+.stage.open .seal { opacity: 0; transform: scale(1.5); }
+.letter .to { font-size: 13px; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.letter .amt { font-family: var(--display); font-size: 54px; letter-spacing: -.02em; line-height: 1.1; margin-top: 8px; color: #181410; }
+.letter .amt small { font-size: 20px; color: #6D655A; font-family: var(--text); }
+.letter .words { font-family: var(--display); font-style: italic; font-size: 19px; line-height: 1.35; margin-top: 14px; color: #3a332b; }
+.letter .arrived { font-size: 13px; color: #6D655A; margin-top: 14px; }
+:root[data-theme="dark"] .letter .amt, :root[data-theme="dark"] .letter .words { color: var(--ink); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .letter .amt, :root:not([data-theme="light"]) .letter .words { color: var(--ink); } :root:not([data-theme="light"]) .letter .amt small, :root:not([data-theme="light"]) .letter .arrived { color: var(--muted); } }
+
+.status { display: flex; align-items: center; justify-content: center; gap: 0; margin: 34px 0 0; }
+.status .s { display: flex; flex-direction: column; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); width: 96px; }
+.status .s i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); background: var(--paper); }
+.status .s.done i { background: var(--ink); border-color: var(--ink); }
+.status .s.now { color: var(--ink); font-weight: 500; } .status .s.now i { border-color: var(--dawn-b); box-shadow: 0 0 0 5px color-mix(in srgb, var(--dawn-b) 22%, transparent); animation: pulse 2.4s ease-in-out infinite; }
+.status .bar { flex: 1; max-width: 70px; height: 2px; background: var(--line); margin-bottom: 24px; }
+.status .bar.done { background: var(--ink); }
+.center { text-align: center; }
+.center .lede { margin-left: auto; margin-right: auto; }
+.pair { display: flex; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+.pair .cta { margin: 0; flex: 1 1 200px; }
+.cta.line { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); }
+.cta.line:hover:not(:disabled) { box-shadow: inset 0 0 0 1.5px var(--ink); }
+.promise { margin: 34px auto 0; max-width: 40ch; font-size: 15px; color: var(--muted); }
+.countdown { font-family: var(--display); font-size: clamp(26px, 6vw, 36px); margin-top: 28px; }
+.foot { text-align: center; font-size: 12px; color: var(--muted); padding: 0 20px max(18px, env(safe-area-inset-bottom)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; transition-delay: 0s !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo"><i></i>Kindred</div>
+  <span class="proto">Prototype · no real funds</span>
+</header>
+<div class="thread" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
+
+<main id="main" aria-live="polite">
+
+  <!-- 1 · WHO -->
+  <section id="s-who">
+    <h1 id="who-h" tabindex="-1"></h1>
+    <p class="lede" id="who-lede"></p>
+    <div id="who-fields"></div>
+    <p class="msg" id="who-msg" role="alert"></p>
+    <button class="cta" id="who-next">Continue</button>
+    <p class="also" id="also"></p>
+  </section>
+
+  <!-- 2 · HOW MUCH + GROW -->
+  <section id="s-grow" hidden>
+    <h1 id="grow-h" tabindex="-1">How much?</h1>
+    <div class="amount-wrap">
+      <input id="amount" inputmode="decimal" autocomplete="off" aria-label="Amount" placeholder="0">
+      <div class="chips" id="unit-chips" role="group" aria-label="Asset"></div>
+    </div>
+    <p class="small" id="amount-help" style="margin-top:10px"></p>
+
+    <button class="switch" id="grow-switch" role="switch" aria-checked="false">
+      <span><b>Let it grow while it waits</b><span class="small" id="grow-sub">Staked on Monad until the day.</span></span>
+      <span class="tog"></span>
+    </button>
+
+    <div class="chart">
+      <div class="readout" id="readout"></div>
+      <div style="position:relative">
+        <svg class="tl" id="tl" viewBox="0 0 640 200" role="img" aria-label="Timeline of the value over time"></svg>
+        <input class="scrub" id="scrub" type="range" min="0" max="1000" value="1000" aria-label="Travel through time" style="top:0;bottom:0;height:100%">
+        <span class="hint" id="hint">drag to travel through time</span>
+      </div>
+      <div class="axis"><span>Today</span><span id="axis-end"></span></div>
+    </div>
+    <p class="fine" id="fine"></p>
+
+    <button class="cta" id="grow-next">Continue</button>
+    <button class="ghost" data-back="s-who">Back</button>
+  </section>
+
+  <!-- 3 · FUND -->
+  <section id="s-fund" hidden>
+    <h1 id="fund-h" tabindex="-1">Seal it.</h1>
+    <p class="lede">One last look. After this, you don't have to do anything.</p>
+    <dl class="summary" id="summary"></dl>
+
+    <label class="lbl" for="note">A note to open with it</label>
+    <textarea class="note" id="note" maxlength="160"></textarea>
+
+    <span class="lbl">Pay from</span>
+    <div class="chips" id="src-chips" role="group" aria-label="Pay from"></div>
+    <p class="small" id="src-help" style="margin-top:10px"></p>
+
+    <ul class="steps" id="steps" hidden></ul>
+    <button class="cta dawn" id="lock">Lock it in</button>
+    <button class="ghost" data-back="s-grow" id="fund-back">Back</button>
+  </section>
+
+  <!-- 4 · SEALED -->
+  <section id="s-sealed" class="center" hidden>
+    <h1 id="sealed-h" tabindex="-1"></h1>
+    <p class="lede" id="sealed-lede"></p>
+    <div class="stage" id="stage1" aria-hidden="true">
+      <div class="env"><div class="back"></div><div class="letter"></div><div class="front"></div><div class="flap"></div><div class="seal">K</div></div>
+    </div>
+    <div class="status" id="status1" aria-label="Status"></div>
+    <p class="promise" id="promise"></p>
+    <div class="pair">
+      <button class="cta line" id="ics">Add to my calendar</button>
+      <button class="cta" id="see-her">See <span class="nm"></span>'s side</button>
+    </div>
+    <p style="margin-top:18px"><span class="small" id="cancel-note"></span></p>
+  </section>
+
+  <!-- 5 · RECIPIENT -->
+  <section id="s-open" class="center" hidden>
+    <p class="small" id="from"></p>
+    <h1 id="open-h" tabindex="-1"></h1>
+    <div class="stage" id="stage2">
+      <div class="env"><div class="back"></div><div class="letter" id="letter"></div><div class="front"></div><div class="flap"></div><div class="seal">K</div></div>
+    </div>
+    <p class="countdown" id="countdown"></p>
+    <div class="status" id="status2" aria-label="Status"></div>
+    <div class="pair">
+      <button class="cta line" data-back="s-sealed">Back to Mum's view</button>
+      <button class="cta dawn" id="travel">Jump to the day ›</button>
+    </div>
+    <p class="small" style="margin-top:14px">The jump is a prototype control. In the real thing, it just happens.</p>
+  </section>
+
+</main>
+<p class="foot">Kindred prototype · mocked data · illustration only, not financial advice</p>
+
+<script>
+'use strict';
+/* ============ helpers ============ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const DAY = 864e5, YEAR = 365.25 * DAY;
+const NET = 0.045;                      // illustrative: 5% gross, minus our 10% share of rewards
+const NOW = Date.now();
+const T0 = Date.UTC(new Date(NOW).getUTCFullYear(), new Date(NOW).getUTCMonth(), new Date(NOW).getUTCDate());
+
+const dim = (y, m) => new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+const addYears = (ms, n) => { const d = new Date(ms), y = d.getUTCFullYear() + n, m = d.getUTCMonth(); return Date.UTC(y, m, Math.min(d.getUTCDate(), dim(y, m))); };
+const addMonths = (ms, n) => { const d = new Date(ms), t = d.getUTCMonth() + n, y = d.getUTCFullYear() + Math.floor(t / 12), m = ((t % 12) + 12) % 12; return Date.UTC(y, m, Math.min(d.getUTCDate(), dim(y, m))); };
+const fmtDate = ms => new Date(ms).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+const fmtShort = ms => new Date(ms).toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' });
+const iso = ms => new Date(ms).toISOString().slice(0, 10);
+const parseISO = s => { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s); return m ? Date.UTC(+m[1], +m[2] - 1, +m[3]) : NaN; };
+const fmtN = (n, d = 0) => n.toLocaleString('en-US', { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const ordinal = n => n + (['th', 'st', 'nd', 'rd'][(n % 100 >> 3) ^ 1 && n % 10 < 4 ? n % 10 : 0]);
+const localTime = ms => new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+/* ============ state ============ */
+const S = {
+  preset: 'family', name: 'Maya', note: '',
+  dob: iso(addYears(T0, -6) - 120 * DAY), moment: '18', custom: iso(addYears(T0, 5)),
+  start: iso(addMonths(Date.UTC(new Date(NOW).getUTCFullYear(), new Date(NOW).getUTCMonth(), 1), 1)), months: 6,
+  people: 10, dropDate: iso(addMonths(T0, 2)),
+  amount: 5000, unit: 'MON', grow: true, source: 'monad', chain: 'Base',
+  scrub: 1000, touched: false, locked: false
+};
+const PRESETS = {
+  family: { who: 'Who is this for?', lede: 'Pick a moment. We’ll make sure it arrives.', unit: 'MON', amt: 5000, grow: true },
+  pay:    { who: 'Who are you paying?', lede: 'Set it once. They’re paid on the same day every month.', unit: 'USDC', amt: 1200, grow: false },
+  drop:   { who: 'Who’s getting it?', lede: 'One day, everyone, no gas to chase.', unit: 'USDC', amt: 100, grow: false }
+};
+
+/* ============ derived ============ */
+function tranches() {
+  if (S.preset === 'family') {
+    const dob = parseISO(S.dob);
+    const t = S.moment === 'custom' ? parseISO(S.custom) : addYears(dob, +S.moment);
+    return isNaN(t) ? [] : [{ t, a: +S.amount || 0, who: S.name || 'them' }];
+  }
+  if (S.preset === 'pay') {
+    const s = parseISO(S.start); if (isNaN(s)) return [];
+    return Array.from({ length: S.months }, (_, i) => ({ t: addMonths(s, i), a: +S.amount || 0, who: S.name || 'them' }));
+  }
+  const t = parseISO(S.dropDate); if (isNaN(t)) return [];
+  return [{ t, a: (+S.amount || 0) * S.people, who: S.people + ' people' }];
+}
+const growOn = () => S.grow && S.unit === 'MON';
+const g = t => growOn() ? Math.pow(1 + NET, Math.max(0, t - T0) / YEAR) : 1;
+function worth(t, trs) {
+  let waiting = 0, arrived = 0, principal = 0;
+  for (const x of trs) { principal += x.a; if (t >= x.t) arrived += x.a * g(x.t); else waiting += x.a * g(t); }
+  return { waiting, arrived, total: waiting + arrived, principal };
+}
+const endOf = trs => Math.max(...trs.map(x => x.t));
+function momentLabel() {
+  if (S.preset === 'family') return S.moment === 'custom' ? 'a special day' : ordinal(+S.moment) + ' birthday';
+  if (S.preset === 'pay') return S.months + ' monthly payments';
+  return 'community drop';
+}
+
+/* ============ navigation ============ */
+const ORDER = ['s-who', 's-grow', 's-fund', 's-sealed'];
+let cur = 's-who';
+function go(id, focus = true) {
+  $$('main > section').forEach(s => s.hidden = s.id !== id);
+  cur = id;
+  const idx = Math.max(0, ORDER.indexOf(id === 's-open' ? 's-sealed' : id));
+  $$('.thread span').forEach((s, i) => s.classList.toggle('on', i <= idx));
+  window.scrollTo({ top: 0 });
+  if (id === 's-grow') drawChart();
+  if (id === 's-fund') renderFund();
+  if (id === 's-sealed') renderSealed();
+  if (id === 's-open') renderOpen();
+  const h = $('#' + id + ' h1'); if (h && focus) h.focus({ preventScroll: true });
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-back]'); if (b) go(b.dataset.back); });
+
+/* ============ step 1 ============ */
+function chips(items, sel, name) {
+  return items.map(([v, t]) => `<button class="chip" data-${name}="${v}" aria-pressed="${String(v) === String(sel)}">${t}</button>`).join('');
+}
+function renderWho() {
+  const P = PRESETS[S.preset];
+  $('#who-h').textContent = P.who; $('#who-lede').textContent = P.lede;
+  let h = '';
+  if (S.preset === 'family') {
+    h = `<label class="lbl" for="name">Their first name</label>
+      <input class="field" id="name" value="${esc(S.name)}" placeholder="Maya" autocomplete="off" maxlength="24">
+      <label class="lbl" for="dob">Date of birth</label>
+      <input class="field" id="dob" type="date" value="${S.dob}">
+      <span class="lbl">Send it on their</span>
+      <div class="chips" id="moments">${chips([['18', '18th birthday'], ['21', '21st birthday'], ['custom', 'Another day']], S.moment, 'moment')}</div>
+      ${S.moment === 'custom' ? `<input class="field" id="custom" type="date" value="${S.custom}" style="margin-top:14px" aria-label="Date">` : ''}`;
+  } else if (S.preset === 'pay') {
+    h = `<label class="lbl" for="name">Their name</label>
+      <input class="field" id="name" value="${esc(S.name === 'Maya' ? 'Sam' : S.name)}" placeholder="Sam" autocomplete="off" maxlength="24">
+      <label class="lbl" for="start">First payment</label>
+      <input class="field" id="start" type="date" value="${S.start}">
+      <span class="lbl">Every month for</span>
+      <div class="chips">${chips([[3, '3 months'], [6, '6 months'], [12, '12 months']], S.months, 'months')}</div>`;
+  } else {
+    h = `<label class="lbl" for="name">Community name</label>
+      <input class="field" id="name" value="${esc(S.name === 'Maya' ? 'Design Guild' : S.name)}" placeholder="Design Guild" autocomplete="off" maxlength="24">
+      <label class="lbl" for="dropdate">Day it arrives</label>
+      <input class="field" id="dropdate" type="date" value="${S.dropDate}">
+      <span class="lbl">People</span>
+      <div class="chips">${chips([[5, '5'], [10, '10'], [25, '25'], [50, '50']], S.people, 'people')}</div>`;
+  }
+  $('#who-fields').innerHTML = h;
+  const others = Object.keys(PRESETS).filter(k => k !== S.preset);
+  const lab = { family: 'Back to a family gift', pay: 'Paying someone monthly', drop: 'A community drop' };
+  $('#also').innerHTML = 'Also for: ' + others.map(k => `<button data-preset="${k}">${lab[k]}</button>`).join(' &nbsp;·&nbsp; ');
+  validateWho();
+}
+function validateWho() {
+  const trs = tranches(); let m = '';
+  if (!trs.length) m = 'Pick a date.';
+  else if (endOf(trs) < T0 + DAY) m = S.preset === 'family' && S.moment !== 'custom' ? 'That date has already passed. Choose another day instead.' : 'Pick a date in the future.';
+  else if (trs.some(x => x.t < T0 + DAY)) m = 'The first payment must be at least a day away.';
+  $('#who-msg').textContent = m; $('#who-next').disabled = !!m || !(S.name || '').trim();
+}
+$('#who-fields').addEventListener('input', e => {
+  const id = e.target.id;
+  if (id === 'name') S.name = e.target.value.trim();
+  if (id === 'dob') S.dob = e.target.value;
+  if (id === 'custom') S.custom = e.target.value;
+  if (id === 'start') S.start = e.target.value;
+  if (id === 'dropdate') S.dropDate = e.target.value;
+  validateWho();
+});
+$('#who-fields').addEventListener('click', e => {
+  const c = e.target.closest('.chip'); if (!c) return;
+  if (c.dataset.moment) { S.moment = c.dataset.moment; renderWho(); }
+  if (c.dataset.months) { S.months = +c.dataset.months; renderWho(); }
+  if (c.dataset.people) { S.people = +c.dataset.people; renderWho(); }
+});
+$('#also').addEventListener('click', e => {
+  const b = e.target.closest('[data-preset]'); if (!b) return;
+  const p = b.dataset.preset, P = PRESETS[p]; S.preset = p; S.unit = P.unit; S.amount = P.amt; S.grow = P.grow;
+  S.name = p === 'family' ? 'Maya' : p === 'pay' ? 'Sam' : 'Design Guild'; renderWho();
+});
+$('#who-next').onclick = () => { if (!S.touched) { const P = PRESETS[S.preset]; S.unit = S.unit || P.unit; } go('s-grow'); setupGrow(); };
+
+/* ============ step 2 ============ */
+const amountEl = $('#amount');
+function sizeAmount() { amountEl.style.width = Math.max(2, (amountEl.value.length || 1) + 0.3) + 'ch'; }
+function setupGrow() {
+  amountEl.value = S.amount ? String(S.amount) : ''; sizeAmount();
+  const t1 = tranches()[0];
+  $('#amount-help').textContent = S.preset === 'family' ? `For ${S.name || 'them'}, on ${t1 ? fmtDate(t1.t) : '\u2026'}.`
+    : S.preset === 'pay' ? `Paid each month, ${S.months} times.` : `Each of ${S.people} people. ${fmtN(S.amount * S.people)} ${S.unit} in total.`;
+  $('#unit-chips').innerHTML = chips([['MON', 'MON'], ['USDC', 'USDC']], S.unit, 'unit');
+  syncGrow(); drawChart();
+}
+function syncGrow() {
+  const sw = $('#grow-switch'), ok = S.unit === 'MON';
+  sw.setAttribute('aria-checked', String(ok && S.grow)); sw.setAttribute('aria-disabled', String(!ok));
+  $('#grow-sub').textContent = ok ? 'Staked on Monad until the day. Opt-in; you can leave it off.' : 'Growing is available for MON. Switch the asset to try it.';
+}
+amountEl.addEventListener('input', () => {
+  amountEl.value = amountEl.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1').slice(0, 9);
+  S.amount = parseFloat(amountEl.value) || 0; S.touched = true; sizeAmount(); drawChart();
+});
+$('#unit-chips').addEventListener('click', e => { const c = e.target.closest('.chip'); if (!c) return; S.unit = c.dataset.unit; $('#unit-chips').innerHTML = chips([['MON', 'MON'], ['USDC', 'USDC']], S.unit, 'unit'); syncGrow(); drawChart(); });
+$('#grow-switch').onclick = () => { if (S.unit !== 'MON') return; S.grow = !S.grow; syncGrow(); drawChart(); };
+
+/* the thread */
+const W = 640, H = 200, PX = 8, PT = 14, PB = 24;
+function drawChart() {
+  const trs = tranches(); const svg = $('#tl');
+  if (!trs.length) { svg.innerHTML = ''; return; }
+  const end = endOf(trs), span = Math.max(end - T0, DAY);
+  const maxV = Math.max(worth(end, trs).total, 1) * 1.06, minV = growOn() ? worth(T0, trs).principal * 0.82 : 0;
+  const X = t => PX + ((t - T0) / span) * (W - 2 * PX), Y = v => H - PB - ((v - minV) / (maxV - minV)) * (H - PB - PT);
+  const N = 120; let d = '';
+  for (let i = 0; i <= N; i++) { const t = T0 + (span * i) / N; d += (i ? 'L' : 'M') + X(t).toFixed(1) + ' ' + Y(worth(t, trs).total).toFixed(1); }
+  const area = d + `L${X(end)} ${H - PB}L${X(T0)} ${H - PB}Z`;
+  const sx = PX + (S.scrub / 1000) * (W - 2 * PX), st = T0 + (S.scrub / 1000) * span, sw = worth(st, trs);
+  const principal = worth(end, trs).principal;
+  const dots = [...new Set(trs.map(x => x.t))].map(t => `<circle cx="${X(t).toFixed(1)}" cy="${Y(worth(t, trs).total).toFixed(1)}" r="${t <= st ? 5.5 : 4}" fill="${t <= st ? 'var(--ink)' : 'var(--paper)'}" stroke="var(--ink)" stroke-width="1.5"/>`).join('');
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="dg" x1="0" x2="1"><stop offset="0" stop-color="var(--dawn-a)"/><stop offset="1" stop-color="var(--dawn-b)"/></linearGradient>
+      <linearGradient id="fade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--dawn-b)" stop-opacity=".28"/><stop offset="1" stop-color="var(--dawn-a)" stop-opacity="0"/></linearGradient>
+      <clipPath id="past"><rect x="0" y="0" width="${sx.toFixed(1)}" height="${H}"/></clipPath>
+    </defs>
+    ${growOn() ? `<line x1="${PX}" x2="${W - PX}" y1="${Y(principal).toFixed(1)}" y2="${Y(principal).toFixed(1)}" stroke="var(--line)" stroke-dasharray="3 5"/>` : ''}
+    <line x1="${PX}" x2="${W - PX}" y1="${H - PB}" y2="${H - PB}" stroke="var(--line)"/>
+    <path d="${d}" fill="none" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/>
+    <g clip-path="url(#past)"><path d="${area}" fill="url(#fade)"/><path d="${d}" fill="none" stroke="url(#dg)" stroke-width="4" stroke-linecap="round"/></g>
+    ${dots}
+    <line x1="${sx}" x2="${sx}" y1="${PT}" y2="${H - PB}" stroke="var(--ink)" stroke-width="1" opacity=".35"/>
+    <circle cx="${sx}" cy="${Y(sw.total).toFixed(1)}" r="9" fill="var(--paper)" stroke="url(#dg)" stroke-width="4"/>`;
+  $('#axis-end').textContent = fmtDate(end);
+  // readout
+  const atEnd = S.scrub >= 1000, atStart = S.scrub <= 0;
+  const when = atStart ? 'Today' : atEnd ? fmtDate(end) : fmtDate(st);
+  const grown = sw.total - sw.principal * (sw.total ? 1 : 0);
+  let sub = '';
+  if (S.preset !== 'family') sub = `Arrived <b>${fmtN(sw.arrived)}</b> · waiting <b>${fmtN(sw.waiting)}</b>`;
+  if (growOn()) sub += (sub ? ' · ' : '') + `<em>+${fmtN(sw.total - Math.min(sw.principal, sw.total), 0)} ${S.unit} grown</em>`;
+  if (S.preset === 'family' && !growOn()) sub = atEnd ? `Arrives on ${S.name || 'their'} ${momentLabel()}.` : 'Waiting, safely.';
+  $('#readout').innerHTML = `<div class="when">${when}</div><div class="big">${fmtN(sw.total)} <small>${S.unit}</small></div><div class="sub">${sub}</div>`;
+  $('#fine').textContent = growOn()
+    ? 'Illustration at 5% a year, minus our 10% share of rewards. Rewards vary and are not guaranteed.'
+    : (S.preset === 'family' ? 'Nothing happens until the day. Then it arrives on its own.' : 'Each payment arrives on its date, on its own.');
+}
+$('#scrub').addEventListener('input', e => { S.scrub = +e.target.value; if (!S.touched2) { S.touched2 = true; $('#hint').hidden = true; } drawChart(); });
+$('#grow-next').onclick = () => { if (!(S.amount > 0)) { amountEl.focus(); return; } go('s-fund'); };
+
+/* ============ step 3 ============ */
+const CHAINS = ['Base', 'Ethereum', 'Arbitrum', 'Solana'];
+function renderFund() {
+  const trs = tranches(), tot = trs.reduce((a, x) => a + x.a, 0), end = endOf(trs);
+  const rows = [];
+  rows.push(['For', esc(S.preset === 'drop' ? `${S.name} · ${S.people} people` : S.name)]);
+  if (S.preset === 'pay') rows.push(['Paid', `${S.months} times, from ${fmtDate(trs[0].t)}`]);
+  else rows.push(['Arrives', fmtDate(end)]);
+  rows.push(['Locked', `${fmtN(tot)} ${S.unit}`]);
+  rows.push(['While it waits', growOn() ? 'Staked on Monad' : 'Held safely, untouched']);
+  rows.push(['Changes', 'You can cancel. It takes 7 days and they’re told.']);
+  $('#summary').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
+  if (!S.note && S.preset === 'family') S.note = S.moment === 'custom' ? `For you, ${S.name}. With love.` : `Happy ${ordinal(+S.moment)}, ${S.name}. We’re so proud of you.`;
+  $('#note').value = S.note; $('#note').closest('label, textarea');
+  $('#note').parentElement.querySelector('label[for="note"]').hidden = S.preset !== 'family';
+  $('#note').hidden = S.preset !== 'family';
+  renderSources();
+  $('#steps').hidden = true; $('#lock').disabled = false; $('#lock').hidden = false; $('#fund-back').hidden = false;
+}
+function renderSources() {
+  $('#src-chips').innerHTML = chips([['monad', 'Monad wallet'], ['other', 'Another chain']], S.source, 'src');
+  $('#src-help').innerHTML = S.source === 'monad' ? 'Straight from your wallet. One confirmation.' :
+    `Funds from another chain are bridged to Monad automatically (via Aurora Intents) &mdash; no manual bridging. From: ${CHAINS.map(c => `<button class="chip" style="min-height:36px;padding:4px 14px;font-size:14px;margin:4px 4px 0 0" data-chain="${c}" aria-pressed="${c === S.chain}">${c}</button>`).join('')}`;
+}
+$('#src-chips').addEventListener('click', e => { const c = e.target.closest('[data-src]'); if (c) { S.source = c.dataset.src; renderSources(); } });
+$('#src-help').addEventListener('click', e => { const c = e.target.closest('[data-chain]'); if (c) { S.chain = c.dataset.chain; renderSources(); } });
+$('#note').addEventListener('input', e => S.note = e.target.value);
+$('#lock').onclick = () => {
+  const steps = S.source === 'monad'
+    ? ['Confirming in your wallet', 'Locking it in the schedule']
+    : [`Sending from ${S.chain}`, 'Arriving on Monad', 'Locking it in the schedule'];
+  const ul = $('#steps'); ul.hidden = false;
+  ul.innerHTML = steps.map(s => `<li><i>✓</i>${s}</li>`).join('') + `<li><i>✓</i>Sealed</li>`;
+  $('#lock').disabled = true; $('#fund-back').hidden = true;
+  const lis = $$('li', ul); let i = 0;
+  const tick = () => { if (i > 0) lis[i - 1].className = 'done'; if (i < lis.length) { lis[i].className = 'active'; i++; setTimeout(tick, S.source === 'monad' ? 800 : 1100); } else { S.locked = true; setTimeout(() => go('s-sealed'), 500); } };
+  tick();
+};
+
+/* ============ envelope + status ============ */
+function statusHTML(stage) {
+  const names = ['Funded', 'Waiting', 'Delivered'];
+  return names.map((n, i) => {
+    const cls = i < stage ? 'done' : i === stage ? 'now' : '';
+    return (i ? `<span class="bar ${i <= stage ? 'done' : ''}"></span>` : '') + `<div class="s ${cls}"><i></i>${n}</div>`;
+  }).join('');
+}
+function letterHTML(opened) {
+  const trs = tranches(), tot = trs.reduce((a, x) => a + x.a, 0), end = endOf(trs), val = worth(end, trs).total;
+  const arr = `Arrived ${fmtDate(end)}, 4 seconds after midnight UTC.`;
+  return `<div class="to">For ${esc(S.preset === 'family' ? S.name : S.preset === 'pay' ? S.name : S.name)}</div>
+    <div class="amt" id="amt">${opened ? '0' : fmtN(val)} <small>${S.unit}</small></div>
+    ${S.preset === 'family' && S.note ? `<div class="words">“${esc(S.note)}”</div>` : ''}
+    <div class="arrived">${arr}</div>`;
+}
+function renderSealed() {
+  const trs = tranches(), end = endOf(trs);
+  $('#sealed-h').textContent = `Sealed for ${S.name}.`;
+  $('#sealed-lede').textContent = S.preset === 'pay' ? `First payment ${fmtDate(trs[0].t)}.` : `It opens on ${fmtDate(end)}.`;
+  $('#stage1 .letter').innerHTML = letterHTML(false);
+  $('#status1').innerHTML = statusHTML(1);
+  $('#promise').textContent = 'You don’t need to do anything. If every Kindred server vanished, they could still claim it on the day.';
+  $('#cancel-note').textContent = 'Need to change your mind? Cancelling takes 7 days, and they’re told.';
+  $$('.nm').forEach(n => n.textContent = S.name);
+  $('#see-her').style.display = S.preset === 'family' ? '' : 'none';
+}
+$('#see-her').onclick = () => go('s-open');
+
+/* recipient */
+let timer;
+function renderOpen() {
+  const trs = tranches(), end = endOf(trs);
+  $('#from').textContent = 'A gift from Mum';
+  $('#open-h').textContent = 'Something is waiting for you.';
+  const st = $('#stage2'); st.classList.remove('open');
+  $('#letter').innerHTML = letterHTML(false);
+  $('#status2').innerHTML = statusHTML(1);
+  $('#travel').disabled = false; $('#travel').hidden = false;
+  clearInterval(timer);
+  const upd = () => {
+    const ms = end - Date.now(); if (ms <= 0) return;
+    const a = new Date(), b = new Date(end);
+    let y = b.getUTCFullYear() - a.getUTCFullYear(), m = b.getUTCMonth() - a.getUTCMonth(), d = b.getUTCDate() - a.getUTCDate();
+    if (d < 0) { m--; d += dim(a.getUTCFullYear(), a.getUTCMonth()); } if (m < 0) { y--; m += 12; }
+    const p = (n, w) => n ? `${n} ${w}${n > 1 ? 's' : ''}` : '';
+    $('#countdown').textContent = 'Opens in ' + [p(y, 'year'), p(m, 'month'), p(d, 'day')].filter(Boolean).join(', ');
+  };
+  upd(); timer = setInterval(upd, 60000);
+}
+$('#travel').onclick = () => {
+  clearInterval(timer);
+  const trs = tranches(), val = worth(endOf(trs), trs).total;
+  $('#travel').disabled = true;
+  $('#countdown').textContent = fmtDate(endOf(trs));
+  setTimeout(() => {
+    $('#stage2').classList.add('open'); $('#status2').innerHTML = statusHTML(3);
+    $('#open-h').textContent = `Happy ${S.moment === 'custom' ? 'day' : ordinal(+S.moment) + ' birthday'}, ${S.name}.`;
+    $('#from').textContent = 'It arrived on its own.';
+    const el = $('#amt'), t0 = performance.now(), dur = 1800;
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const step = n => { const k = reduce ? 1 : Math.min(1, (n - t0 - 900) / dur), e = 1 - Math.pow(1 - Math.max(0, k), 3); el.firstChild.nodeValue = fmtN(val * e) + ' '; if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+    $('#countdown').textContent = '';
+    $('#travel').hidden = true;
+  }, 350);
+};
+
+/* ics */
+$('#ics').onclick = () => {
+  const trs = tranches().slice(0, 24), stamp = new Date().toISOString().replace(/[-:]/g, '').slice(0, 15) + 'Z';
+  const ymd = ms => iso(ms).replace(/-/g, '');
+  const ev = trs.map((x, i) => ['BEGIN:VEVENT', `UID:kindred-${stamp}-${i}@kindred.app`, `DTSTAMP:${stamp}`, `DTSTART;VALUE=DATE:${ymd(x.t)}`,
+    `SUMMARY:Kindred: ${fmtN(x.a)} ${S.unit} arrives for ${S.name}`, 'DESCRIPTION:Sent automatically. Nothing to do.', 'END:VEVENT'].join('\r\n')).join('\r\n');
+  const blob = new Blob([`BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Kindred//EN\r\n${ev}\r\nEND:VCALENDAR\r\n`], { type: 'text/calendar' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'kindred.ics'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+/* ============ boot ============ */
+renderWho();
+const q = new URLSearchParams(location.search);
+if (q.get('theme')) document.documentElement.dataset.theme = q.get('theme');
+if (q.get('go')) { // review shortcuts: ?go=s-grow&grow=1
+  if (q.get('grow')) { S.grow = true; }
+  go(q.get('go')); if (q.get('go') === 's-grow') setupGrow();
+  if (q.get('scrub')) { S.scrub = +q.get('scrub'); $('#scrub').value = S.scrub; drawChart(); }
+}
+</script>
+</body>
+</html>
