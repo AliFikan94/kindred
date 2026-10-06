@@ -1,6 +1,6 @@
 # Kindred — Product & Contract Spec (v0.2, hackathon scope)
 
-Status: §14 records what the contracts in `contracts/` actually do (step 2 built and tested). Staking (§7), keeper (§10), funding via Aurora (§8) are not built yet. Items marked **VERIFY** depend on external
+Status: §14 (vault/factory) and §15 (staking) record what the contracts in `contracts/` actually do. The keeper (§10) and Aurora funding (§8) are not built yet. Items marked **VERIFY** depend on external
 facts we have not confirmed and must be checked before we rely on them.
 
 ## 1. The promise
@@ -103,36 +103,48 @@ Mode is chosen at creation and cannot change.
 ## 7. Staking (opt-in, native MON only)
 
 Why: locked principal for 12+ years should not sit idle. Why opt-in: it adds failure modes to a
-product whose entire value is reliability.
+product whose entire value is reliability. As built: see §15.
 
-**Facts (documented; VERIFY on testnet before relying):** the Monad staking precompile supports
-delegate / undelegate / withdraw / claimRewards; undelegated stake is withdrawable after a delay of
-1 epoch (≈ 5.5 h). Sources: docs.monad.xyz staking reference.
+**Facts, verified against the precompile's own source** (github.com/category-labs/monad,
+`category/execution/monad/staking/staking_contract.cpp`, checked at commit `f20b5b8`, 5 Oct 2026):
 
-**Strategy interface (shared by Idle and MonadStake):**
-`deposit(amount)`, `requestWithdraw(amount)`, `finalizeWithdraw()`, `totalAssets()`.
+- Address `0x…1000`. Calls used: `delegate(uint64) payable` `0x84994fec`, `undelegate(uint64,uint256,uint8)`
+  `0x5cf41514`, `withdraw(uint64,uint8)` `0xaed2ee73`, `claimRewards(uint64)` `0xa76e2ca5`,
+  view `getDelegator(uint64,address)` `0x573c1ce0`. Mutating calls return an ABI-encoded `true`.
+- A delegation must be >= 1 gwei and becomes active in epoch+1 (epoch+2 inside the boundary window).
+  Only *active* stake can be undelegated.
+- `undelegate` creates a withdrawal request keyed by a `uint8` id that must be unused for that delegator.
+  `withdraw` is allowed once `currentEpoch >= requestEpoch + 1`, where `requestEpoch` is itself epoch+1
+  (or +2 in the window) — so **up to 3 epochs (~17 h at ~5.5 h/epoch) from undelegate to cash**.
+- Rewards accrue to the delegator and are pulled with `claimRewards`; rewards belonging to an unbonding
+  slice come back inside its `withdraw`.
+- No slashing logic exists in this contract source (only a validator `DoubleSign` flag and a test comment about a
+  "slashing window"). The vault is written so that it **never pays more than it received**, in any case.
 
-**Delivery for staked tranches:**
-- The keeper calls `prepare(trancheId)` **48 h before** `unlockTime` (permissionless; anyone — including the
-  recipient — can call it). It starts the undelegation so cash is ready at unlock.
-- Normal case: delivery lands at unlock time like any idle tranche.
-- Degraded case (nobody prepared): the recipient's claim is available after the withdrawal delay,
-  at most ≈ one epoch late. The UI says "within hours" for staked schedules. The promise for staked
-  schedules is therefore *"on the day, and never more than ~6 hours late even if everything fails"*.
-- Single validator in v1 (chosen at creation, from a short allowlist set at deploy). **VERIFY** slashing
-  rules and validator-selection risks. Multi-validator spreading is post-hackathon.
+**Product rules that follow**
+- A staked schedule is **irrevocable**: cancelling would require unbonding first, and an unbonding wait in the
+  middle of a cancel is not a thing we want to get wrong.
+- Only tranches unlocking at least `MIN_STAKE_LEAD` (= `PREPARE_LEAD` + 1 day, 3 days at the 48 h default) after
+  staking are staked; sooner ones stay liquid, so nothing is staked "too late to come back".
+- Keepers start unbonding a tranche inside the `PREPARE_LEAD` window (48 h before unlock); then the funds are
+  liquid at unlock like any other tranche.
+- Delivery promise for staked schedules: **on the day when a keeper prepared in time; otherwise at most
+  ~3 epochs (~17 h) late even if every keeper is down**, because the recipient's own `claim()` starts unbonding
+  and a second `claim()` collects. (Earlier drafts said "about one epoch": that was wrong.)
+- Honest dependency: staked funds are only as live as Monad's staking system. If the precompile permanently
+  refused `undelegate`/`withdraw`, those tranches would be stuck. This is disclosed, not engineered away.
 
-**Yield accounting (simple, symmetrical):** the schedule holds `totalAssets` against `totalNominal`
-(sum of undelivered tranche amounts). A tranche pays `amount × totalAssets / totalNominal` at execution
-— yield is shared pro-rata, and a loss (slashing) would be shared pro-rata too. No promise of a floor.
-For idle schedules the ratio is exactly 1.
+**Yield accounting (replaces the earlier `totalAssets / totalNominal` idea, which could not be made solvent):**
+rewards are *harvested* (`claimRewards`) into the vault and shared among the tranches **currently staked**,
+pro-rata to principal, through a per-principal accumulator. A tranche's yield is fixed when it is prepared. It pays
+`principal received + yield − 10 % of yield`. Only rewards that are actually in the vault are ever distributed, so
+the vault cannot become insolvent by construction.
 
-**Fees:** 10 % of *yield only*, taken at payout. Never from principal. Keeper tip comes from a small
-`executionDeposit` in MON paid by the creator at funding (unused remainder refunded at close), so idle
-and ERC-20/NFT schedules also satisfy invariant 2.
+**Fees:** 10 % of *yield only*, sent to an immutable recipient set at factory deploy. Never from principal.
+Keeper tips: 3 per native tranche (prepare, settle, deliver), reserved by the creator at funding.
 
-**Illustration in the UI:** shown with a fixed, clearly labelled assumption (5 % a year gross,
-4.5 % after our share). Never presented as a forecast. Quoted 12–14 % LST yields are not used.
+**Illustration in the UI:** a fixed, clearly labelled assumption (5 % a year gross, 4.5 % after our share). Never a
+forecast. Quoted LST yields of 12–14 % are not used.
 
 ## 8. Funding
 
@@ -202,8 +214,7 @@ fiat on/off-ramps, yield for stablecoins, upgradeability.
 
 ## 14. As built — vault & factory (step 2)
 
-Source: `contracts/src/ScheduleVault.sol`, `ScheduleFactory.sol`. 90 tests: unit, fuzz, and a stateful
-invariant suite (7 invariants x 20,480 random calls). Line coverage 100 %. Mutation-checked: deliberately
+Source: `contracts/src/ScheduleVault.sol`, `ScheduleFactory.sol`. Counts below are for the idle vault; see §15 for totals. Mutation-checked: deliberately
 breaking cancel rules, unlock checks, tip accounting, sweep grace, gas guard, effects-before-interaction and
 failure isolation each makes at least one test fail.
 
@@ -256,3 +267,41 @@ failure isolation each makes at least one test fail.
   *limit* rather than gas used (**VERIFY**), the keeper pays for that headroom — size `tipPerExecution` accordingly
   (measured actual use: ~70k for a native tranche, ~175k for a 3-tranche batch).
 - **EVM version:** compiled for `cancun`. **VERIFY** the target network supports it (it should).
+
+## 15. As built — staking (step 3)
+
+Source: `contracts/src/StakedScheduleVault.sol` (extends `ScheduleVault` through three small hooks:
+`_readyToPay`, `_tipSlots`, and `_init`), `ScheduleFactory.sol` (second implementation, validator allowlist,
+fee recipient — all fixed at deploy). **129 tests** across the project, 13 stateful invariants, line coverage 100 %.
+Every mutation I tried against the staking maths, fee, timing windows, tip accounting and failure handling is caught.
+
+**Stage machine per native tranche:** `Idle → Staked → Unbonding → Liquid`, with `stakeAll()`,
+`prepare()/prepareMany()`, `harvest()` as permissionless external steps. `settle` happens inside
+`execute / claim / sweep`, so there is no separate call a recipient must know about.
+
+**What the tests prove (staking-specific)**
+- *Conservation*: native across vault + precompile + every participant = start + rewards injected, always.
+- *Solvency*: the vault always holds what is liquid-owed (tip reserve, unstaked tranches, settled payouts).
+- *No overpayment*: no payout exceeds principal + all rewards ever injected.
+- Exact maths with fixed numbers (pro-rata across tranches, a tranche that joins after a harvest, rewards embedded
+  in the unbonding slice, a 10 % loss on unbonding, fee recipient absent).
+- Failure modes: delegation refused → tranche stays liquid and delivers; stake not yet active → `prepare` fails
+  loudly then succeeds; rewards refused → principal still delivered; recipient cannot receive → payout stays fixed
+  and claimable; worst-case 2-epoch activation window.
+
+**Found while building (and fixed)**
+- The base vault never tipped the keeper of the *last* tranche (closing zeroed the reserve first). Regression test added.
+- Unlock-time readiness is not enough for staked funds, so `claim()`/`execute()` on an unprepared tranche now *progress*
+  the state (start unbonding) instead of reverting.
+
+**Not verified yet (no network access to Monad from the build environment)**
+| Item | Why it matters |
+|---|---|
+| Gas cost of precompile calls on Monad | guards assume ~900k headroom; `delegate`/`claimRewards` were recalled as ~260k/155k |
+| Epoch length in wall-clock time | docs say ~5.5 h; `PREPARE_LEAD` (48 h) has ~3x margin over the worst-case 3 epochs |
+| Real validator ids on testnet / mainnet | the allowlist is a constructor argument |
+| That `withdraw`/`claimRewards` credit the vault without executing its code | the vault's `receive()` is empty either way |
+| Solidity-level call behaviour against the precompile | the vault uses low-level `call` (no `extcodesize` check) on purpose |
+
+The mock precompile (`test/mocks/MockStaking.sol`) reproduces the behaviours read from the source, so passing tests
+prove the vault against *that* model — the first testnet run is the real check and should be done before any demo.

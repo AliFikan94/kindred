@@ -36,6 +36,15 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
     ///      from forcing a false "failed" by starving the call.
     uint256 internal constant MIN_GAS_FOR_PUSH = (PUSH_GAS * 64) / 63 + 60_000;
 
+    /// @dev Result of the delivery hook. `Waiting`: nothing can be done yet (callers revert or skip).
+    ///      `Progressed`: a preparatory step ran (e.g. unbonding started) but nothing is payable yet.
+    ///      `Ready`: pay `amount` now.
+    enum Readiness {
+        Waiting,
+        Progressed,
+        Ready
+    }
+
     // ------------------------------------------------------------------ storage
     address public creator;
     address public fallbackRecipient;
@@ -109,7 +118,18 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         uint64 fundingDeadline_,
         uint96 tipPerExecution_,
         TrancheInput[] calldata inputs
-    ) external payable initializer {
+    ) external payable virtual initializer {
+        _init(creator_, fallbackRecipient_, revocable_, fundingDeadline_, tipPerExecution_, inputs);
+    }
+
+    function _init(
+        address creator_,
+        address fallbackRecipient_,
+        bool revocable_,
+        uint64 fundingDeadline_,
+        uint96 tipPerExecution_,
+        TrancheInput[] calldata inputs
+    ) internal {
         uint256 n = inputs.length;
         if (n == 0 || n > MAX_TRANCHES) revert BadTrancheCount();
         if (creator_ == address(0) || fallbackRecipient_ == address(this)) revert BadAddress();
@@ -119,7 +139,7 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         revocable = revocable_;
         fundingDeadline = fundingDeadline_;
         tipPerExecution = tipPerExecution_;
-        tipPool = uint256(tipPerExecution_) * n;
+        tipPool = uint256(tipPerExecution_) * n * _tipSlots();
         if (msg.value < tipPool) revert TipUnderfunded();
 
         uint256 horizon = block.timestamp + MAX_HORIZON;
@@ -255,6 +275,10 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         if ((s != Status.Pending && s != Status.Claimable) || block.timestamp < t.unlockTime) return false;
         if (gasleft() < MIN_GAS_FOR_PUSH) revert InsufficientGas();
 
+        (Readiness r, uint256 amount) = _readyToPay(id, keeper);
+        if (r == Readiness.Waiting) return false;
+        if (r == Readiness.Progressed) return true;
+
         bool first = s == Status.Pending;
         address recipient = t.recipient;
 
@@ -262,15 +286,17 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         t.status = Status.Delivered;
         if (proposals[id].to != address(0)) delete proposals[id];
 
-        if (_push(t, recipient)) {
+        bool delivered = _push(t, recipient, amount);
+        if (delivered) {
             emit Executed(id, recipient, keeper);
-            _terminal();
         } else {
             t.status = Status.Claimable;
             emit DeliveryFailed(id, recipient);
         }
 
+        // Pay the keeper BEFORE a possible close: closing zeroes the tip reserve.
         if (first) _payTip(keeper);
+        if (delivered) _terminal();
         return true;
     }
 
@@ -285,11 +311,15 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         if (s != Status.Pending && s != Status.Claimable) revert NotExecutable();
         if (block.timestamp < t.unlockTime) revert NotUnlocked();
 
+        (Readiness r, uint256 amount) = _readyToPay(id, address(0));
+        if (r == Readiness.Waiting) revert NotExecutable();
+        if (r == Readiness.Progressed) return;
+
         t.status = Status.Delivered;
         if (proposals[id].to != address(0)) delete proposals[id];
 
         if (t.kind == Kind.Native) {
-            (bool ok,) = payable(msg.sender).call{value: t.amountOrId}("");
+            (bool ok,) = payable(msg.sender).call{value: amount}("");
             if (!ok) revert PayoutFailed();
         } else if (t.kind == Kind.ERC20) {
             IERC20(t.token).safeTransfer(msg.sender, t.amountOrId);
@@ -311,11 +341,15 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         if (block.timestamp < uint256(t.unlockTime) + SWEEP_GRACE) revert GraceNotOver();
         if (gasleft() < MIN_GAS_FOR_PUSH * 2) revert InsufficientGas();
 
+        (Readiness r, uint256 amount) = _readyToPay(id, msg.sender);
+        if (r == Readiness.Waiting) revert NotExecutable();
+        if (r == Readiness.Progressed) return;
+
         t.status = Status.Swept;
         address dest = fallbackRecipient == address(0) ? creator : fallbackRecipient;
-        if (!_push(t, dest)) {
+        if (!_push(t, dest, amount)) {
             dest = creator;
-            if (!_push(t, dest)) revert PayoutFailed();
+            if (!_push(t, dest, amount)) revert PayoutFailed();
         }
         emit Swept(id, dest);
         _terminal();
@@ -476,6 +510,19 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
 
     // ------------------------------------------------------------------ internals
 
+    // ------------------------------------------------------------------ extension points
+
+    /// @dev How many keeper tips are reserved per tranche (1 = deliver). Staked schedules reserve more.
+    function _tipSlots() internal view virtual returns (uint256) {
+        return 1;
+    }
+
+    /// @dev Called before paying tranche `id`, from execute / claim / sweep. The idle vault has
+    ///      nothing to prepare: the funds are already here.
+    function _readyToPay(uint256 id, address) internal virtual returns (Readiness, uint256) {
+        return (Readiness.Ready, _tranches[id].amountOrId);
+    }
+
     function _terminal() private {
         if (--openCount == 0) _close();
     }
@@ -486,9 +533,9 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
         cancelRequestedAt = 0;
     }
 
-    function _payTip(address keeper) private {
+    function _payTip(address keeper) internal {
         uint256 tip = tipPerExecution;
-        if (tip == 0 || tipPool < tip) return;
+        if (keeper == address(0) || tip == 0 || tipPool < tip) return;
         tipPool -= tip;
         bool ok;
         uint256 gasCap = TIP_GAS;
@@ -501,9 +548,9 @@ contract ScheduleVault is Initializable, ReentrancyGuard, IERC721Receiver {
 
     /// @dev Never reverts because of the recipient/token: returns false instead. Return data is
     ///      not copied (no returndata bombs) and forwarded gas is capped.
-    function _push(Tranche storage t, address to) private returns (bool ok) {
+    function _push(Tranche storage t, address to, uint256 nativeAmount) private returns (bool ok) {
         Kind kind = t.kind;
-        uint256 amt = t.amountOrId;
+        uint256 amt = kind == Kind.Native ? nativeAmount : t.amountOrId;
         uint256 gasCap = PUSH_GAS;
 
         if (kind == Kind.Native) {

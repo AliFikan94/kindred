@@ -22,12 +22,14 @@ abstract contract Base is Test {
     address internal carol = makeAddr("carol");
     address internal keeper = makeAddr("keeper");
     address internal fb = makeAddr("fallback");
+    address internal feeSink = makeAddr("feeSink");
 
     uint256 internal salts;
 
     function setUp() public virtual {
         vm.warp(T0);
-        f = new ScheduleFactory(60, 30 days, 1 ether);
+        uint64[] memory vals = new uint64[](0);
+        f = new ScheduleFactory(60, 30 days, 1 ether, 48 hours, feeSink, vals);
         tok = new TestERC20();
         nft = new TestERC721();
         vm.deal(creator, 10_000 ether);
@@ -48,7 +50,8 @@ abstract contract Base is Test {
             revocable: revocable,
             fundingWindow: 1 hours,
             tipPerExecution: tip,
-            salt: bytes32(++salts)
+            salt: bytes32(++salts),
+            validatorId: 0
         });
     }
 

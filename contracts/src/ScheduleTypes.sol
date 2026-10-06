@@ -52,4 +52,5 @@ struct ScheduleParams {
     uint64 fundingWindow; // seconds the schedule may wait for funding
     uint96 tipPerExecution; // native tip paid to whoever executes each tranche
     bytes32 salt; // makes the vault address predictable for the creator
+    uint64 validatorId; // 0 = idle schedule; otherwise stake native tranches with this (allowlisted) validator
 }

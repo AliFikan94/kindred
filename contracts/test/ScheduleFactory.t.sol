@@ -16,9 +16,9 @@ contract ScheduleFactoryTest is Base {
 
     function test_constructor_rejectsBadBounds() public {
         vm.expectRevert();
-        new ScheduleFactory(0, 10, 1);
+        new ScheduleFactory(0, 10, 1, 1 days, address(0), new uint64[](0));
         vm.expectRevert();
-        new ScheduleFactory(20, 10, 1);
+        new ScheduleFactory(20, 10, 1, 1 days, address(0), new uint64[](0));
     }
 
     function test_fundingWindow_bounds() public {
@@ -58,7 +58,7 @@ contract ScheduleFactoryTest is Base {
 
     function test_predict_matchesActualAddress() public {
         ScheduleParams memory p = _p(false, address(0), 0);
-        address predicted = f.predict(creator, p.salt);
+        address predicted = f.predict(creator, p.salt, false);
         TrancheInput[] memory ins = _one(_native(alice, 1 ether, T0 + DAY));
         vm.prank(creator);
         address actual = f.create{value: 1 ether}(p, ins, true);
@@ -66,7 +66,7 @@ contract ScheduleFactoryTest is Base {
     }
 
     function test_predict_isPerCreator() public view {
-        assertTrue(f.predict(creator, bytes32(uint256(1))) != f.predict(alice, bytes32(uint256(1))));
+        assertTrue(f.predict(creator, bytes32(uint256(1)), false) != f.predict(alice, bytes32(uint256(1)), false));
     }
 
     function test_sameSalt_sameCreator_reverts_butOtherCreatorOk() public {
@@ -86,7 +86,7 @@ contract ScheduleFactoryTest is Base {
     /// (what a bridge delivery would do) are recognised once the schedule is created.
     function test_counterfactualFunding_thenCreateThenActivate() public {
         ScheduleParams memory p = _p(false, address(0), 0);
-        address predicted = f.predict(creator, p.salt);
+        address predicted = f.predict(creator, p.salt, false);
         vm.prank(creator);
         tok.transfer(predicted, 5 ether); // lands on an address with no code yet
         TrancheInput[] memory ins = _one(_erc20(alice, address(tok), 5 ether, T0 + DAY));
@@ -101,7 +101,7 @@ contract ScheduleFactoryTest is Base {
 
     function test_event_emitted() public {
         ScheduleParams memory p = _p(true, fb, 0);
-        address predicted = f.predict(creator, p.salt);
+        address predicted = f.predict(creator, p.salt, false);
         TrancheInput[] memory ins = _one(_native(alice, 1 ether, T0 + DAY));
         vm.expectEmit(true, true, false, true, address(f));
         emit ScheduleFactory.ScheduleCreated(predicted, creator, 1, true, T0 + 1 hours, true);

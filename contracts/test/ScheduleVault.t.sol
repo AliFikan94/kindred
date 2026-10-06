@@ -387,6 +387,17 @@ contract ScheduleVaultTest is Base {
         assertEq(creator.balance - before, 0.01 ether);
     }
 
+    /// Regression: the keeper who delivers the LAST tranche (which closes the vault) is still tipped.
+    function test_tip_paidToKeeperOfTheFinalTranche() public {
+        ScheduleVault v = _simple(1 ether, 1, 0.01 ether, false);
+        vm.warp(T0 + DAY);
+        vm.prank(keeper);
+        v.execute(0);
+        assertEq(uint8(v.state()), uint8(State.Closed));
+        assertEq(keeper.balance, 0.01 ether);
+        assertEq(address(v).balance, 0);
+    }
+
     function test_tip_keeperThatCannotReceive_doesNotBlockDelivery() public {
         ScheduleVault v = _simple(1 ether, 1, 0.01 ether, false);
         BadKeeper bk = new BadKeeper();
