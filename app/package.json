@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "vitest run -c vitest.e2e.config.ts"
   },
   "dependencies": {
     "react": "^18.3.1",

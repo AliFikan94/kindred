@@ -76,6 +76,9 @@ describe('share links', () => {
   it('builds a fragment link', () => {
     expect(scheduleLink('https://k.app', '0xabc', m)).toMatch(/^https:\/\/k\.app\/#\/s\/0xabc\?m=[A-Za-z0-9_-]+$/);
     expect(scheduleLink('https://k.app', '0xabc')).toBe('https://k.app/#/s/0xabc');
+    // a base that already ends in a slash (location.origin + pathname) must not double it
+    expect(scheduleLink('https://k.app/', '0xabc')).toBe('https://k.app/#/s/0xabc');
+    expect(scheduleLink('https://k.app/app/', '0xabc')).toBe('https://k.app/app/#/s/0xabc');
   });
 });
 

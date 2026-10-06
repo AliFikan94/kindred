@@ -68,5 +68,5 @@ export function decodeMeta(s: string | null | undefined): Meta | null {
 /** `#/s/<vault>` plus `?m=<meta>` (kept inside the fragment, so it is never sent to the server). */
 export function scheduleLink(origin: string, vault: string, meta?: Meta): string {
   const m = meta ? `?m=${encodeMeta(meta)}` : '';
-  return `${origin}/#/s/${vault}${m}`;
+  return `${origin.replace(/\/+$/, '')}/#/s/${vault}${m}`;
 }
