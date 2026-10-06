@@ -1,6 +1,6 @@
-# Kindred — Product & Contract Spec (v0.1, hackathon scope)
+# Kindred — Product & Contract Spec (v0.2, hackathon scope)
 
-Status: draft for review. Nothing here is built yet. Items marked **VERIFY** depend on external
+Status: §14 records what the contracts in `contracts/` actually do (step 2 built and tested). Staking (§7), keeper (§10), funding via Aurora (§8) are not built yet. Items marked **VERIFY** depend on external
 facts we have not confirmed and must be checked before we rely on them.
 
 ## 1. The promise
@@ -199,3 +199,60 @@ fiat on/off-ramps, yield for stablecoins, upgradeability.
 | 4 | Aurora Intents API, Monad destination tokens, bounty requirements | Step 6 |
 | 5 | Testnet faucet + RPC reliability | Step 2 |
 | 6 | Passkey / smart-account support on Monad | P2 claim links |
+
+## 14. As built — vault & factory (step 2)
+
+Source: `contracts/src/ScheduleVault.sol`, `ScheduleFactory.sol`. 90 tests: unit, fuzz, and a stateful
+invariant suite (7 invariants x 20,480 random calls). Line coverage 100 %. Mutation-checked: deliberately
+breaking cancel rules, unlock checks, tip accounting, sweep grace, gas guard, effects-before-interaction and
+failure isolation each makes at least one test fail.
+
+**Invariants → where they are proven**
+
+| # | Invariant | Proven by |
+|---|---|---|
+| 1 | Destination safety | `invariant_conservation`, `invariant_nftsOnlyAtLegitDestinations`, `testFuzz_strangerCannotMoveFunds` |
+| 2 | Exactness (idle) | `testFuzz_exactDelivery_native/_erc20_viaClaim`, `invariant_conservation` |
+| 3 | No post-unlock cancel | `invariant_transitionsAreLegal` (cancelledAfterUnlock), `test_cancel_doesNotTouchTrancheUnlockedButUndelivered` |
+| 4 | Isolation | `test_rejectingRecipient_*`, `test_gasBurningRecipient_*`, blocklist / false-return / NFT-receiver tests |
+| 5 | Claim liveness | `test_claim_worksWithNoKeeper_fromUnlock`, `test_claim_erc20_and_nft` |
+| 6 | No double payout | `test_execute_twiceReverts_noDoublePayout`, `invariant_transitionsAreLegal` |
+| 7 | Conservation / solvency | `invariant_conservation`, `invariant_solvent`, `invariant_bookkeeping` |
+| 8 | Bounded gas | execute is per-tranche; `executeMany` skips non-due; `test_gasBurningRecipient_isBounded_*` |
+| 9 | No admin keys | no privileged functions exist; `test_vault_cannotBeReinitialized`, `test_implementation_cannotBeInitialized` |
+
+**Decisions made while building (these refine, and in places replace, the text above)**
+
+- **One factory, one clone per schedule.** `ScheduleFactory.create(params, tranches, fundNow)`. With `fundNow`
+  it pulls ERC-20/721 from `msg.sender` into the new vault and activates in the same tx (native value must match
+  exactly). Users approve the factory once (a fixed address). Without it, a draft is created that anyone can
+  `activate()` after the address is funded by any means — the Aurora path.
+- **Counterfactual funding.** Vault addresses are deterministic (`factory.predict(creator, salt)`), so a bridge
+  can deliver assets to the address *before* the vault is deployed and `activate()` sees them.
+- **Tip, not "executionDeposit".** The creator pays `tipPerExecution x trancheCount` in native at creation. The
+  first attempt on a tranche pays the keeper one tip (success or failure); retries and self-claims pay none;
+  unused tips return to the creator at close or on cancel. A keeper that cannot receive its tip never blocks delivery.
+- **Failure handling.** A failed push marks the tranche `Claimable` (shown as "Needs attention"); it stays retriable
+  by anyone and claimable by the recipient. Pushes forward at most 300k gas and require the caller to have
+  supplied enough gas to honour that (a starved caller cannot fake a failure). Return data is never copied.
+  Native and ERC-20 results are checked (no-return-value tokens such as USDT are accepted; `false` is a failure).
+- **Claim differs from push on purpose.** `claim()` is the recipient's own action: it reverts loudly on failure and
+  hands NFTs over with plain `transferFrom` (a contract recipient that cannot take `safeTransfer` can still collect).
+- **Sweep covers both `Pending` and `Claimable`** after 365 days past unlock — if neither keepers nor the recipient
+  ever acted. Destination: fallback if set and able to receive, otherwise the creator. Before the grace period the
+  creator cannot reach unlocked funds at all.
+- **Unfunded schedules**: `abandon()` (creator, any time) and `refund()` (anyone, after the funding deadline) close
+  the schedule; leftovers return via `withdrawNative / rescueERC20 / rescueERC721`, callable only once Closed.
+- **Funding must settle before anything can unlock**: every `unlockTime` must be later than `fundingDeadline`.
+- **Unsupported assets fail closed**: fee-on-transfer tokens cannot be activated (balance check fails); the same
+  NFT cannot be promised twice; tokens must be contracts.
+
+**Consequences for later steps**
+
+- **Staking (step 3)** adds a second vault implementation behind the same factory interface and overrides the
+  native payout path; it does not change this contract's invariants. The 48 h `prepare()` and pro-rata yield
+  accounting from §7 are still to build.
+- **Keeper cost on Monad:** `execute` needs the caller to supply >= ~365k gas (guard above; `sweep` ~730k since it may try two destinations). If Monad bills the gas
+  *limit* rather than gas used (**VERIFY**), the keeper pays for that headroom — size `tipPerExecution` accordingly
+  (measured actual use: ~70k for a native tranche, ~175k for a 3-tranche batch).
+- **EVM version:** compiled for `cancun`. **VERIFY** the target network supports it (it should).
