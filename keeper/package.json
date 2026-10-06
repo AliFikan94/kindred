@@ -1,0 +1,25 @@
+{
+  "name": "kindred-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Permissionless keeper for Kindred schedules: prepares staked tranches, executes due ones, reports its own reliability.",
+  "scripts": {
+    "abi": "node scripts/extract-abi.mjs",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:unit": "vitest run test/planner.test.ts test/backoff.test.ts"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "viem": "^2.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}

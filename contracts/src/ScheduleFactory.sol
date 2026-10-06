@@ -38,7 +38,8 @@ contract ScheduleFactory {
         uint256 trancheCount,
         bool revocable,
         uint64 fundingDeadline,
-        bool funded
+        bool funded,
+        bool staked
     );
 
     error BadFundingWindow();
@@ -117,7 +118,7 @@ contract ScheduleFactory {
             if (staked) StakedScheduleVault(payable(vault)).stakeAll();
         }
 
-        emit ScheduleCreated(vault, msg.sender, tranches.length, p.revocable, deadline, fundNow);
+        emit ScheduleCreated(vault, msg.sender, tranches.length, p.revocable, deadline, fundNow, staked);
     }
 
     /// @notice The address a schedule will have. Lets a UI request a bridge quote or show the

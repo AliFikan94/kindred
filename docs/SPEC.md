@@ -174,11 +174,15 @@ Native path is built and flawless **first**. Cross-chain is a layer on top.
 
 ## 10. Keeper & reliability
 
-- Keeper = a small service that watches schedules and calls `prepare` (staked) and `execute`.
-- It is *one* of several actors that can trigger; it is not trusted.
-- Run two instances from different hosts. Idempotent: re-calling `execute` on a finished tranche is a harmless revert.
-- Every execution records `blockTime - unlockTime`. The public status page shows on-time rate and median delay —
-  reliability is the product, so it is the one number we publish.
+- The keeper is **one of several actors** that can trigger delivery; it is not trusted and cannot redirect funds.
+- **As built:** `keeper/` (TypeScript, viem). Stateless and idempotent; decides from chain time; dry-runs every action;
+  most overdue first; per-action exponential backoff for failed sends (no backoff for "not yet", so a tranche is
+  collected on the first tick after it becomes collectable); a tranche whose push failed is retried hourly, not every tick.
+  Run two instances with different keys for redundancy.
+- Every delivery records `blockTime - unlockTime`. `/status` publishes on-time rate and p50/p95/max lateness.
+  Reliability is the product, so it is the one number we publish.
+- Not a dependency of correctness: `claim()` always works from the unlock second (staked: ~3 epochs worst case, §7).
+- See §16 for what was and was not verified.
 
 ## 11. Privacy
 
@@ -305,3 +309,26 @@ Every mutation I tried against the staking maths, fee, timing windows, tip accou
 
 The mock precompile (`test/mocks/MockStaking.sol`) reproduces the behaviours read from the source, so passing tests
 prove the vault against *that* model — the first testnet run is the real check and should be done before any demo.
+
+## 16. As built — keeper (step 4)
+
+Source: `keeper/` (see its README). **47 tests**, 12 mutation checks, plus an end-to-end run of the real CLI against a
+local node using the real `Deploy.s.sol`.
+
+**Verified end to end (local node `anvil`, real contracts, staking mock):** discovery from events; delivery at the exact
+unlock second with measured lateness 0; staked lifecycle unattended (prepare at T-48h, wait out unbonding, deliver
+principal + 90 % of rewards); recovery when the keeper missed its window; failed push -> claimable -> retried only after the
+delay -> delivered once the recipient fixes it; two keepers racing deliver exactly once; funded draft is activated then
+staked; unfunded draft is refunded; restart from state file and from a corrupt one; RPC failure mid-tick and mid-scan;
+failed sends backed off; graceful shutdown on SIGTERM; `/status` and `/healthz`.
+
+**Found while building:** `ScheduleCreated` did not say whether a vault was staked, so the keeper could not tell vault
+types apart from the event alone. The event now carries `staked`.
+
+**Not verified (no access to a Monad network from the build environment)**
+| Item | Consequence if wrong |
+|---|---|
+| Whether `eth_call` / `eth_estimateGas` on Monad behave like a standard node for these calls | the dry-run could mis-classify; floors still hold |
+| Gas pricing (limit vs used) and real precompile gas | cost per action; tune `GAS_*` |
+| Log-range limits of the real RPC | tune `LOG_CHUNK` |
+| Block timestamp granularity / finality (`CONFIRMATIONS`) | lateness figures, reorg handling |

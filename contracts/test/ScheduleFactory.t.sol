@@ -104,7 +104,7 @@ contract ScheduleFactoryTest is Base {
         address predicted = f.predict(creator, p.salt, false);
         TrancheInput[] memory ins = _one(_native(alice, 1 ether, T0 + DAY));
         vm.expectEmit(true, true, false, true, address(f));
-        emit ScheduleFactory.ScheduleCreated(predicted, creator, 1, true, T0 + 1 hours, true);
+        emit ScheduleFactory.ScheduleCreated(predicted, creator, 1, true, T0 + 1 hours, true, false);
         vm.prank(creator);
         f.create{value: 1 ether}(p, ins, true);
     }
