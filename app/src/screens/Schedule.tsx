@@ -184,7 +184,13 @@ function View({ s, meta, now, fresh, refresh }: { s: ScheduleView; meta: Meta | 
             const p = proof(t);
             if (!p) return null;
             const url = explorer(p.tx);
-            return <span key={t.id}>{p.how === 'claimed' ? 'Collected' : 'Delivered'} {afterMidnight(p.blockTime - t.unlockTime)} · {url ? <a href={url} target="_blank" rel="noreferrer noopener">view transaction</a> : <code>{p.tx.slice(0, 10)}…</code>}</span>;
+            return (
+              <span key={t.id}>
+                <span className="proof-plain">{p.how === 'claimed' ? 'Collected' : 'Delivered'} {afterMidnight(p.blockTime - t.unlockTime)} · </span>
+                <Postmark verb={p.how === 'claimed' ? 'Collected' : 'Delivered'} at={p.blockTime} />
+                {url ? <a href={url} target="_blank" rel="noreferrer noopener">view transaction</a> : <code>{p.tx.slice(0, 10)}…</code>}
+              </span>
+            );
           })}
         </p>
       )}
@@ -248,6 +254,20 @@ function View({ s, meta, now, fresh, refresh }: { s: ScheduleView; meta: Meta | 
       {cfg.mode === 'sim' && <DemoControls s={s} next={next} refresh={refresh} />}
       {cfg.keeperUrl && <KeeperBadge url={cfg.keeperUrl} />}
     </section>
+  );
+}
+
+/** The stationery look's version of the delivery proof: a stamp with the exact UTC moment. Hidden in the classic look. */
+function Postmark({ verb, at }: { verb: string; at: number }) {
+  const d = new Date(at * 1000);
+  const day = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
+  const time = d.toISOString().slice(11, 19);
+  return (
+    <span className="postmark" aria-label={`${verb} ${day} at ${time} UTC`}>
+      <span aria-hidden="true">{verb}</span>
+      <b aria-hidden="true">{day}</b>
+      <span aria-hidden="true">{time} UTC</span>
+    </span>
   );
 }
 

@@ -1,4 +1,5 @@
 import { Component, ReactNode } from 'react';
+import { Appearance } from './components/Appearance.js';
 import { useApp } from './context.js';
 import { shortAddr } from './lib/format.js';
 import { useRoute } from './router.js';
@@ -31,6 +32,7 @@ export function App() {
           <div><span><b>Demo.</b> No wallet, no real funds. Everything happens in this browser.</span></div>
         </div>
       )}
+      <Appearance />
       <header className="top">
         <a className="logo" href="#/" aria-label="Kindred home"><i />Kindred</a>
         <div className="right">

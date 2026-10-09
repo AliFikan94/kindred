@@ -38,13 +38,24 @@ factory's deployment block. `VITE_DEMO=1` adds "in a few minutes" so a real on-c
 
 ```bash
 cd ../contracts && forge build     # artifacts used by the chain tests
-npm test                            # 143 tests: logic, live adapter vs real contracts, simulator, conformance (needs `anvil`)
-npm run e2e                         # 23 browser tests (Chromium): the demo end to end, and a live run with a real keeper
+npm test                            # 150 tests: logic, live adapter vs real contracts, simulator, conformance, appearance (needs `anvil`)
+npm run e2e                         # 34 browser tests (Chromium): the demo end to end, a live run with a real keeper, looks and legibility
 ```
 
 The live end-to-end run builds the app against a local node, injects a wallet stand-in, starts the **real keeper process**, moves chain
 time, and checks the page and the balances: including a gift link opened on a device with no wallet, delivered by the keeper, then moved
 to another wallet.
+
+## Appearance
+
+Two looks and light/dark, switchable from the bar under the header (and by link: `?look=stationery&theme=dark`):
+
+- **Classic**: soft, rounded, the original look.
+- **Stationery**: formal paper-and-ink. Square corners, small-caps labels, a ledger-style summary with double rules, certificate-style
+  panels, a wax seal, and a postmark for the delivery proof.
+
+The theme follows the operating system until you choose. Text contrast is measured in a real browser for every look x theme
+(`e2e/appearance.e2e.ts`). When one look is chosen, delete the `looks` group in `src/components/Appearance.tsx`.
 
 ## Not done / not verified
 

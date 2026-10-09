@@ -60,8 +60,8 @@ Needs Node 20+ and [Foundry](https://book.getfoundry.sh/getting-started/installa
 git clone --recurse-submodules https://github.com/AliFikan94/kindred && cd kindred
 (cd contracts && forge build && forge test)         # 129 tests incl. invariants
 (cd keeper && npm install && npm test)               # 47 tests (needs anvil on PATH)
-(cd app && npm install && npm test && npm run dev)   # 143 tests, then the demo at http://localhost:5173
-(cd app && npm run e2e)                              # 23 browser tests (Chromium)
+(cd app && npm install && npm test && npm run dev)   # 150 tests, then the demo at http://localhost:5173
+(cd app && npm run e2e)                              # 34 browser tests (Chromium)
 ```
 
 The demo needs no wallet and no network. To deploy to Monad testnet and run the real thing, see [`docs/DEPLOY.md`](docs/DEPLOY.md).
