@@ -32,10 +32,10 @@ export function App() {
           <div><span><b>Demo.</b> No wallet, no real funds. Everything happens in this browser.</span></div>
         </div>
       )}
-      <Appearance />
       <header className="top">
         <a className="logo" href="#/" aria-label="Kindred home"><i />Kindred</a>
         <div className="right">
+          <Appearance />
           {account && <a className="pill" href="#/mine">My schedules</a>}
           {cfg.mode === 'live' && (account
             ? <span className="pill live" title={account}>{shortAddr(account)}</span>

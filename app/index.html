@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#F6F2EB" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#100D0B" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#F2ECDD" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#14110D" media="(prefers-color-scheme: dark)">
   <meta name="description" content="Lock something once. It arrives on the day.">
   <meta name="referrer" content="no-referrer">
   <title>Kindred</title>
@@ -12,13 +12,12 @@
 </head>
 <body>
   <script>
-    // Apply the saved look/theme before first paint (no flash). Same rules as src/appearance.ts.
+    // Apply the saved theme before first paint (no flash). Same rules as src/appearance.ts.
     try {
-      var o = JSON.parse(localStorage.getItem('kindred:appearance') || '{}'), q = new URLSearchParams(location.search), r = document.documentElement;
-      var th = q.get('theme') || o.theme, lk = q.get('look') || o.look;
-      if (th === 'light' || th === 'dark') r.setAttribute('data-theme', th);
-      r.setAttribute('data-look', lk === 'stationery' ? 'stationery' : 'classic');
-    } catch (e) { document.documentElement.setAttribute('data-look', 'classic'); }
+      var o = JSON.parse(localStorage.getItem('kindred:appearance') || '{}'), q = new URLSearchParams(location.search);
+      var th = q.get('theme') || o.theme;
+      if (th === 'light' || th === 'dark') document.documentElement.setAttribute('data-theme', th);
+    } catch (e) { /* default theme */ }
   </script>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>

@@ -109,7 +109,7 @@ describe('with a real wallet, real contracts and the real keeper', () => {
 
     await page.waitForSelector('text=Everything has arrived.', { timeout: 30_000 });
     expect((await balance(alice.address)) - before).toBe(5n * MON);
-    expect(await page.textContent('body')).toMatch(/Delivered (right on time|\d+ seconds? after midnight UTC)/);
+    expect(await page.textContent('body')).toMatch(/Arrived .*(right on time|\d+ seconds? after midnight UTC)/);
     expect(errors).toEqual([]);
     await ctx.close();
   });

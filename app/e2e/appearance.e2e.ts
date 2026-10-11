@@ -16,7 +16,7 @@ afterAll(async () => {
 const radius = (p: Page, sel: string) => p.$eval(sel, (e) => getComputedStyle(e).borderTopLeftRadius);
 const bodyBg = (p: Page) => p.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
-describe('theme and look', () => {
+describe('theme and shape', () => {
   it('the theme button cycles Auto -> Light -> Dark -> Auto and is remembered across reloads', async () => {
     const { ctx, page } = await newPage(browser, { scheme: 'light' });
     await page.goto(site.url);
@@ -28,11 +28,11 @@ describe('theme and look', () => {
     await btn.click();
     expect(await btn.textContent()).toContain('Dark');
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark');
-    expect(await bodyBg(page)).toBe('rgb(16, 13, 11)');
+    expect(await bodyBg(page)).toBe('rgb(20, 17, 13)');
 
     await page.reload();
     expect(await page.evaluate(() => document.documentElement.getAttribute('data-theme'))).toBe('dark'); // no flash: set before render
-    expect(await bodyBg(page)).toBe('rgb(16, 13, 11)');
+    expect(await bodyBg(page)).toBe('rgb(20, 17, 13)');
     await page.getByRole('button', { name: /Colour theme/ }).click(); // back to Auto
     expect(await page.evaluate(() => document.documentElement.hasAttribute('data-theme'))).toBe(false);
     await ctx.close();
@@ -41,42 +41,34 @@ describe('theme and look', () => {
   it('Auto follows the operating system, and an explicit choice overrides it', async () => {
     const dark = await newPage(browser, { scheme: 'dark' });
     await dark.page.goto(site.url);
-    expect(await bodyBg(dark.page)).toBe('rgb(16, 13, 11)'); // OS dark, Auto
+    expect(await bodyBg(dark.page)).toBe('rgb(20, 17, 13)'); // OS dark, Auto
     await dark.page.getByRole('button', { name: /Colour theme/ }).click(); // Light
-    expect(await bodyBg(dark.page)).toBe('rgb(246, 242, 235)'); // explicit light beats OS dark
+    expect(await bodyBg(dark.page)).toBe('rgb(242, 236, 221)'); // explicit light beats OS dark
     await dark.ctx.close();
   });
 
-  it('the look switch changes shape: pills in classic, square corners in stationery', async () => {
+  it('shapes are square: buttons and chips use a 2px corner', async () => {
     const { ctx, page } = await newPage(browser);
-    await page.emulateMedia({ reducedMotion: 'reduce' }); // our CSS honours this, so computed values are not mid-animation
+    await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto(site.url);
     await page.waitForSelector('#name');
-    expect(await page.evaluate(() => document.documentElement.getAttribute('data-look'))).toBe('classic');
-    expect(await radius(page, '.cta')).toBe('99px');
-    expect(await radius(page, '.chip')).toBe('99px');
-    await page.getByRole('button', { name: 'Stationery' }).click();
     expect(await radius(page, '.cta')).toBe('2px');
     expect(await radius(page, '.chip')).toBe('2px');
-    expect(await page.getByRole('button', { name: 'Stationery' }).getAttribute('aria-pressed')).toBe('true');
-    await page.reload();
-    expect(await page.evaluate(() => document.documentElement.getAttribute('data-look'))).toBe('stationery'); // remembered
-    expect(await radius(page, '.cta')).toBe('2px');
     await ctx.close();
   });
 
-  it('a link can set the look and theme', async () => {
+  it('a link can set the theme, and junk is ignored', async () => {
     const { ctx, page } = await newPage(browser);
-    await page.goto(`${site.url}?look=stationery&theme=dark`);
-    expect(await page.evaluate(() => [document.documentElement.dataset.look, document.documentElement.dataset.theme])).toEqual(['stationery', 'dark']);
+    await page.goto(`${site.url}?theme=dark`);
+    expect(await page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
     await ctx.close();
     const fresh = await newPage(browser);
-    await fresh.page.goto(`${site.url}?look=<b>&theme=%00`);
-    expect(await fresh.page.evaluate(() => [document.documentElement.dataset.look, document.documentElement.hasAttribute('data-theme')])).toEqual(['classic', false]); // junk ignored
+    await fresh.page.goto(`${site.url}?theme=<b>&look=classic`);
+    expect(await fresh.page.evaluate(() => [document.documentElement.hasAttribute('data-theme'), document.documentElement.hasAttribute('data-look')])).toEqual([false, false]);
     await fresh.ctx.close();
   });
 
-  it('the delivery postmark shows only in the stationery look', async () => {
+  it('the delivery postmark shows the exact UTC moment', async () => {
     const { ctx, page } = await newPage(browser);
     await page.goto(site.url);
     await page.fill('#name', 'Maya');
@@ -87,18 +79,14 @@ describe('theme and look', () => {
     await page.getByRole('button', { name: /See Maya.s side/ }).click();
     await page.getByRole('button', { name: /Jump to the day/ }).click();
     await page.waitForSelector('text=Happy 18th birthday, Maya.');
-    expect(await page.locator('.postmark').isVisible()).toBe(false);
-    expect(await page.locator('.proof-plain').isVisible()).toBe(true);
-    await page.getByRole('button', { name: 'Stationery' }).click();
     expect(await page.locator('.postmark').isVisible()).toBe(true);
-    expect(await page.locator('.proof-plain').isVisible()).toBe(false);
     expect(await page.locator('.postmark').getAttribute('aria-label')).toMatch(/^Delivered \d{2} [A-Z]{3} \d{4} at \d{2}:\d{2}:\d{2} UTC$/);
     await ctx.close();
   });
 
-  it.each([[360, 740], [390, 844]])('stationery has no horizontal scroll at %ix%i on any step', async (w, h) => {
+  it.each([[360, 740], [390, 844]])('no horizontal scroll at %ix%i on any step', async (w, h) => {
     const { ctx, page } = await newPage(browser, { width: w, height: h });
-    await page.goto(`${site.url}?look=stationery`);
+    await page.goto(site.url);
     await page.fill('#name', 'Maya');
     expect(await hasHorizontalScroll(page)).toBe(false);
     await page.getByRole('button', { name: 'Continue' }).click();
@@ -113,10 +101,8 @@ describe('theme and look', () => {
   });
 });
 
-/** WCAG contrast of the text people actually read, measured in the browser for every look x theme. */
-describe.each([
-  ['classic', 'light'], ['classic', 'dark'], ['stationery', 'light'], ['stationery', 'dark'],
-])('legibility: %s / %s', (look, theme) => {
+/** WCAG contrast of the text people actually read, measured in the browser for both themes. */
+describe.each(['light', 'dark'])('legibility: %s', (theme) => {
   const MEASURE = `
     (() => {
       const parse = (c) => {
@@ -159,7 +145,7 @@ describe.each([
 
   it('keeps text readable on the create steps and the opened letter', async () => {
     const { ctx, page } = await newPage(browser, { width: 390, height: 844 });
-    await page.goto(`${site.url}?look=${look}&theme=${theme}`);
+    await page.goto(`${site.url}?theme=${theme}`);
     await page.waitForSelector('#name');
     const run = (items: Array<[string, string, string?]>) =>
       page.evaluate(
@@ -172,7 +158,7 @@ describe.each([
       );
     const results: Array<{ label: string; ratio: number; need: number }> = [];
 
-    results.push(...(await run([['h1', 'h1'], ['lede', '.lede'], ['label', '.lbl'], ['input', '#name'], ['placeholder', '#name', '::placeholder'], ['chip', '.chip[aria-pressed="false"]'], ['chip selected', '.chip[aria-pressed="true"]'], ['cta', '.cta'], ['banner', '.banner'], ['appearance button', '.appearance .mini[aria-pressed="false"]'], ['pill', '.pill']])));
+    results.push(...(await run([['h1', 'h1'], ['lede', '.lede'], ['label', '.lbl'], ['input', '#name'], ['placeholder', '#name', '::placeholder'], ['chip', '.chip[aria-pressed="false"]'], ['chip selected', '.chip[aria-pressed="true"]'], ['cta', '.cta'], ['banner', '.banner'], ['pill', '.pill']])));
     await page.fill('#name', 'Maya');
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.waitForSelector('#amount');
@@ -188,7 +174,7 @@ describe.each([
     results.push(...(await run([['letter amount', '.letter .amt'], ['letter note', '.letter .words'], ['letter arrived line', '.letter .arrived'], ['letter to', '.letter .to'], ['proof', '.proof'], ['postmark', '.postmark']])));
 
     const failures = results.filter((r) => r.ratio < r.need).map((r) => `${r.label}: ${r.ratio} (needs ${r.need})`);
-    expect(failures, `${look}/${theme}`).toEqual([]);
+    expect(failures, theme).toEqual([]);
     await ctx.close();
   });
 });

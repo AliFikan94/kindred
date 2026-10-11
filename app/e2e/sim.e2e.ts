@@ -272,7 +272,7 @@ describe('quality bars', () => {
     const { ctx, page, errors } = await newPage(browser, { scheme: 'dark' });
     await createFamily(page);
     const bg = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
-    expect(bg).toBe('rgb(16, 13, 11)');
+    expect(bg).toBe('rgb(20, 17, 13)');
     expect(errors).toEqual([]);
     await ctx.close();
   });

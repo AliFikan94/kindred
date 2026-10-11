@@ -186,7 +186,6 @@ function View({ s, meta, now, fresh, refresh }: { s: ScheduleView; meta: Meta | 
             const url = explorer(p.tx);
             return (
               <span key={t.id}>
-                <span className="proof-plain">{p.how === 'claimed' ? 'Collected' : 'Delivered'} {afterMidnight(p.blockTime - t.unlockTime)} · </span>
                 <Postmark verb={p.how === 'claimed' ? 'Collected' : 'Delivered'} at={p.blockTime} />
                 {url ? <a href={url} target="_blank" rel="noreferrer noopener">view transaction</a> : <code>{p.tx.slice(0, 10)}…</code>}
               </span>
@@ -257,7 +256,7 @@ function View({ s, meta, now, fresh, refresh }: { s: ScheduleView; meta: Meta | 
   );
 }
 
-/** The stationery look's version of the delivery proof: a stamp with the exact UTC moment. Hidden in the classic look. */
+/** The delivery proof: a postmark with the exact UTC moment. */
 function Postmark({ verb, at }: { verb: string; at: number }) {
   const d = new Date(at * 1000);
   const day = d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }).toUpperCase();
