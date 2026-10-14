@@ -71,10 +71,13 @@ The demo needs no wallet and no network. To deploy to Monad testnet and run the 
 | | |
 |---|---|
 | Network | Monad testnet (chain id 10143) |
-| ScheduleFactory | **to be filled after deployment** |
-| Example schedule transactions | **to be filled after deployment** |
+| ScheduleFactory | [`0xce079E62fd02abA6c1DB2381c03272A4793ce460`](https://testnet.monadvision.com/address/0xce079E62fd02abA6c1DB2381c03272A4793ce460) (block 70847886) |
+| Idle vault implementation | `0x0AD53609AfC24ea6E9FBebe6bdb670a9ABB577f3` |
+| Staked vault implementation | `0x74E6EEe3F4BbF670425b110E606959db9dF8b876` |
+| Deployment transaction | [`0x6dcdf8f8…1dede47`](https://testnet.monadvision.com/tx/0x6dcdf8f89c9ef842d540490350b4a0fe774df7279c59c3e9a11a188f81dede47) |
+| Example schedule transactions | to be added after the live run |
 
-Nothing here is claimed as deployed until the addresses above are filled in.
+The factory was deployed with no staking validators allowlisted, so "let it grow" is off on this deployment: staking has been tested only against a local mock of Monad's staking precompile, not the real network.
 
 ## Status, honestly
 
